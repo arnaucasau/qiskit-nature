@@ -21,7 +21,6 @@ concurrency:
 
 jobs:
   docs_publish:
-    if: ${{ startsWith(github.ref, 'refs/heads/stable') && contains('["mtreinish","woodsp-ibm","mrossinek","robertodr","matteoacrossi"]', github.actor) }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -43,7 +42,7 @@ jobs:
           pip install -e .[pyscf,mpl,sparse]
           pip install -U -c constraints.txt -r requirements-dev.txt
         shell: bash
-      - name: Build and publish
+      - name: Build docs
         env:
           encrypted_rclone_key: ${{ secrets.encrypted_rclone_key }}
           encrypted_rclone_iv: ${{ secrets.encrypted_rclone_iv }}
@@ -53,8 +52,13 @@ jobs:
           echo "earliest_version: 0.1.0" >> releasenotes/config.yaml
           tools/ignore_untagged_notes.sh
           make html
-          tools/deploy_documentation.sh
         shell: bash
+      - name: Bypass Jekyll Processing # Necessary for setting the correct css path
+        run: touch docs/_build/html/.nojekyll
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: docs/_build/html/
   deploy-translatable-strings:
     if: ${{ startsWith(github.ref, 'refs/heads/stable') && contains('["mtreinish","woodsp-ibm","mrossinek","robertodr","matteoacrossi"]', github.actor) }}
     runs-on: ubuntu-latest
